@@ -13,6 +13,11 @@ using Avalonia.Media;
 using Lumafly.Util;
 using Lumafly.ViewModels;
 using Lumafly.Views.Windows;
+using ReactiveUI;
+using System.Collections.ObjectModel;
+using System.Reactive;
+using System.Threading.Tasks.Sources;
+using Git2Sharp = LibGit2Sharp;
 
 namespace Lumafly.Models
 {
@@ -89,6 +94,9 @@ namespace Lumafly.Models
         public string   IntegrationsDesc { get; }
         public string   AuthorsDesc      { get; }
         public string?  Readme           { get; set; }
+
+        public ObservableCollection<string> AvailableVersions { get; } = new();
+        public ReactiveCommand<string, Unit> InstallVersion { get; }
 
         [Notify]
         private ModState _state;
@@ -183,6 +191,18 @@ namespace Lumafly.Models
                 State = orig;
                 throw;
             }
+        }
+
+        public async Task LoadAvailableVersionsFromRepository()
+        {
+            await Task.Run(() => {
+                AvailableVersions.Clear();
+                var refs = Git2Sharp.Repository.ListRemoteReferences(Repository);
+                foreach (var r in refs.Where(r => r.IsTag))
+                {
+                    AvailableVersions.Add(r.CanonicalName);
+                }
+            });
         }
 
         public async Task OnInstall(IInstaller inst, Action<ModProgressArgs> setProgress)
